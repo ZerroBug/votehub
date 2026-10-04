@@ -55,3 +55,22 @@ The application includes `/api/ussd.php`. Your Ghana USSD aggregator must POST t
 - Keep the site on HTTPS.
 - Do not leave `setup.php` publicly usable after installation.
 - Back up the database regularly.
+
+## Live USSD Bot Simulator
+
+After logging in as Super Admin, open **Live USSD Bot** from the sidebar, or visit:
+
+`https://votehubgh.org/admin/ussd-simulator.php`
+
+The simulator sends the browser session to the same `api/ussd.php` callback used by a real USSD gateway. It supports:
+
+1. Active event selection
+2. 4-digit contestant code lookup
+3. Contestant confirmation
+4. Vote quantity
+5. MTN / Telecel / ATMoney selection
+6. Paystack Mobile Money test charge initiation
+7. Payment verification
+8. Vote recording only after successful payment
+
+Keep Paystack in **Test** mode while testing. The simulator requires a working Super Admin login and a configured Paystack test secret key.

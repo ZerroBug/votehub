@@ -7,7 +7,8 @@
     <div class="nav-label">MAIN</div>
     <nav>
         <a href="<?= APP_URL ?>/admin/dashboard.php"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
-    <a href="<?= APP_URL ?>/api/ussd_test.php"><i class="bi bi-phone"></i><span>USSD Test Console</span></a>
+    <a href="<?= APP_URL ?>/admin/ussd-simulator.php"><i class="bi bi-broadcast-pin"></i><span>Live USSD Bot</span></a>
+    <a href="<?= APP_URL ?>/api/ussd_test.php"><i class="bi bi-phone"></i><span>USSD Lookup Test</span></a>
     <a href="<?= APP_URL ?>/api/vote_test.php"><i class="bi bi-wallet2"></i> Vote & Payment Test</a>
 </nav>
 
