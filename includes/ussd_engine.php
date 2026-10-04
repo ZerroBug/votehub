@@ -108,8 +108,8 @@ function runVoteHubUssd(PDO $pdo, string $sessionId, string $phone, string $text
         $reference = generateTransactionReference();
         $metadata = json_encode(['source'=>'USSD','session_id'=>$sessionId,'event_code'=>$selection['event_code'],'contestant_code'=>$selection['contestant_code'],'network'=>$provider],JSON_UNESCAPED_SLASHES);
 
-        $stmt = $pdo->prepare("INSERT INTO transactions(transaction_reference,event_id,category_id,contestant_id,phone_number,vote_count,amount,payment_provider,status,metadata) VALUES(?,?,?,?,?,?,?,'Paystack Mobile Money','Pending',?)");
-        $stmt->execute([$reference,$eventId,$selection['category_id'],$selection['contestant_id'],$phone,$qty,$amount,$metadata]);
+        $stmt = $pdo->prepare("INSERT INTO transactions(transaction_reference,event_id,category_id,contestant_id,phone_number,vote_count,amount,admin_revenue_percentage,payment_provider,status,metadata) VALUES(?,?,?,?,?,?,?,?,'Paystack Mobile Money','Pending',?)");
+        $stmt->execute([$reference,$eventId,$selection['category_id'],$selection['contestant_id'],$phone,$qty,$amount,(float)$selection['admin_revenue_percentage'],$metadata]);
         $transactionId = (int)$pdo->lastInsertId();
 
         try {

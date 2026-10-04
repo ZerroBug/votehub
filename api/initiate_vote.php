@@ -25,8 +25,8 @@ try {
 
     $reference=generateTransactionReference();
     $meta=['source'=>'VoteHub','event_code'=>$selection['event_code'],'contestant_code'=>$selection['contestant_code'],'category_code'=>$selection['category_code'],'provider'=>$provider];
-    $stmt=$pdo->prepare("INSERT INTO transactions (transaction_reference,event_id,category_id,contestant_id,phone_number,vote_count,amount,payment_provider,status,metadata) VALUES (?,?,?,?,?,?,?,?, 'Pending', ?)");
-    $stmt->execute([$reference,$eventId,$selection['category_id'],$selection['contestant_id'],$phone,$voteCount,$amount,'Paystack Mobile Money',json_encode($meta,JSON_UNESCAPED_SLASHES)]);
+    $stmt=$pdo->prepare("INSERT INTO transactions (transaction_reference,event_id,category_id,contestant_id,phone_number,vote_count,amount,admin_revenue_percentage,payment_provider,status,metadata) VALUES (?,?,?,?,?,?,?,?,?, 'Pending', ?)");
+    $stmt->execute([$reference,$eventId,$selection['category_id'],$selection['contestant_id'],$phone,$voteCount,$amount,(float)$selection['admin_revenue_percentage'],'Paystack Mobile Money',json_encode($meta,JSON_UNESCAPED_SLASHES)]);
     $transactionId=(int)$pdo->lastInsertId();
 
     try {

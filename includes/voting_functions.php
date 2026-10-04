@@ -52,7 +52,8 @@ function getVotingSelection(PDO $pdo, int $eventId, string $contestantCode): arr
         c.status category_status,
         e.name event_name,
         e.event_code,
-        e.status event_status
+        e.status event_status,
+        e.admin_revenue_percentage
       FROM contestants x
       JOIN categories c ON c.id=x.category_id AND c.event_id=x.event_id
       JOIN events e ON e.id=x.event_id

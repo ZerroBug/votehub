@@ -52,6 +52,3 @@ Keep Paystack in Test mode until USSD, payment and vote reconciliation have pass
 
 ## Production payment rule
 A vote is never created merely because a payment was initiated. A vote is created only after Paystack confirms a successful payment and the server validates the amount and transaction state.
-
-## Payment reconciliation
-The Transactions page now has **Verify with Paystack** for Pending transactions. It calls Paystack's server-side Verify Transaction API, checks reference/currency/amount, and fulfills a successful transaction exactly once. The Paystack webhook also verifies the transaction before fulfillment and can retry an unprocessed webhook event.

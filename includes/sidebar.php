@@ -25,3 +25,5 @@
 </nav>
 <div class="sidebar-status"><div class="d-flex justify-content-between"><small>USSD Service</small><span class="badge bg-success">READY</span></div><div class="small text-secondary mt-2">Arkesel adapter enabled</div></div>
 </aside>
+
+<a href="<?= APP_URL ?>/admin/cashouts/" class="nav-link"><i class="bi bi-cash-coin"></i><span>Client Cash-outs</span></a>
