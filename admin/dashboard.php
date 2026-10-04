@@ -25,9 +25,9 @@ $totalVotes=(int)$pdo->query("SELECT COALESCE(SUM(vote_count),0) FROM votes")->f
 $totalRevenue=(float)$pdo->query("SELECT COALESCE(SUM(amount),0) FROM transactions WHERE status='Successful'")->fetchColumn();
 $totalAdminRevenue=(float)$pdo->query("SELECT COALESCE(SUM(amount * admin_revenue_percentage / 100),0) FROM transactions WHERE status='Successful'")->fetchColumn();
 $totalClientEarned=round($totalRevenue-$totalAdminRevenue,2);
-$totalClientReserved=(float)$pdo->query("SELECT COALESCE(SUM(requested_amount),0) FROM client_cashouts WHERE status IN ('Requested','Approved','Paid')")->fetchColumn();
-$totalClientAvailable=max(0,round($totalClientEarned-$totalClientReserved,2));
 $totalClientPaid=(float)$pdo->query("SELECT COALESCE(SUM(requested_amount),0) FROM client_cashouts WHERE status='Paid'")->fetchColumn();
+$totalClientPending=(float)$pdo->query("SELECT COALESCE(SUM(requested_amount),0) FROM client_cashouts WHERE status IN ('Requested','Approved')")->fetchColumn();
+$totalClientAvailable=max(0,round($totalClientEarned-$totalClientPaid-$totalClientPending,2));
 ?>
 <div class="row g-3 mb-4">
 <div class="col-xl-3 col-md-6"><div class="card-box stat"><div class="stat-icon"><i class="bi bi-calendar-event"></i></div><div class="stat-label">Total Events</div><div class="stat-value"><?= number_format($totalEvents) ?></div></div></div>
@@ -55,7 +55,7 @@ foreach($q as $e):
 <div class="d-flex justify-content-between border-bottom py-3"><span class="text-secondary">Categories</span><strong><?= $totalCategories ?></strong></div>
 <div class="d-flex justify-content-between border-bottom py-3"><span class="text-secondary">Contestants</span><strong><?= $totalContestants ?></strong></div>
 <div class="d-flex justify-content-between border-bottom py-3"><span class="text-secondary">Votes</span><strong><?= number_format($totalVotes) ?></strong></div>
-<div class="d-flex justify-content-between border-bottom py-3"><span class="text-secondary">Gross Revenue</span><strong>GHS <?= number_format($totalRevenue,2) ?></strong></div><div class="d-flex justify-content-between border-bottom py-3"><span class="text-secondary">Admin / VoteHub</span><strong>GHS <?= number_format($totalAdminRevenue,2) ?></strong></div><div class="d-flex justify-content-between border-bottom py-3"><span class="text-secondary">Client Earned</span><strong>GHS <?= number_format($totalClientEarned,2) ?></strong></div><div class="d-flex justify-content-between border-bottom py-3"><span class="text-secondary">Client Cash-out Paid</span><strong>GHS <?= number_format($totalClientPaid,2) ?></strong></div><div class="d-flex justify-content-between py-3"><span class="text-secondary">Client Available</span><strong>GHS <?= number_format($totalClientAvailable,2) ?></strong></div>
+<div class="d-flex justify-content-between border-bottom py-3"><span class="text-secondary">Gross Revenue</span><strong>GHS <?= number_format($totalRevenue,2) ?></strong></div><div class="d-flex justify-content-between border-bottom py-3"><span class="text-secondary">Admin / VoteHub</span><strong>GHS <?= number_format($totalAdminRevenue,2) ?></strong></div><div class="d-flex justify-content-between border-bottom py-3"><span class="text-secondary">Client Earned</span><strong>GHS <?= number_format($totalClientEarned,2) ?></strong></div><div class="d-flex justify-content-between border-bottom py-3"><span class="text-secondary">Client Cashed Out (Paid)</span><strong>GHS <?= number_format($totalClientPaid,2) ?></strong></div><div class="d-flex justify-content-between border-bottom py-3"><span class="text-secondary">Cash-out Pending/Approved</span><strong>GHS <?= number_format($totalClientPending,2) ?></strong></div><div class="d-flex justify-content-between py-3"><span class="text-secondary">Client Available Balance</span><strong>GHS <?= number_format($totalClientAvailable,2) ?></strong></div>
 <a href="events/create.php" class="btn btn-primary w-100 mt-2">Create New Event</a>
 </div></div></div>
 </div>
