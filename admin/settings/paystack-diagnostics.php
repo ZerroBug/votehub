@@ -1,0 +1,7 @@
+<?php
+declare(strict_types=1);
+require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../config/paystack.php';
+requireSuperAdmin();
+$d=paystackDiagnostics();
+?><!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Paystack Diagnostics</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light"><div class="container py-5"><div class="card shadow-sm"><div class="card-body p-4"><h3>Paystack Diagnostics</h3><p class="text-muted">Safe diagnostic check. The secret key itself is never displayed.</p><div class="row g-3 mt-2"><div class="col-md-6"><strong>Mode</strong><div><?=htmlspecialchars($d['mode'])?></div></div><div class="col-md-6"><strong>Key configured</strong><div><?= $d['key_configured']?'Yes':'No' ?></div></div><div class="col-md-6"><strong>Key type</strong><div><?=htmlspecialchars($d['key_type'])?></div></div><div class="col-md-6"><strong>Mode/key match</strong><div><?= $d['mode_key_match']?'Yes':'No' ?></div></div><div class="col-12"><strong>API connection</strong><div class="mt-1"><span class="badge <?= $d['api']==='ok'?'text-bg-success':'text-bg-danger' ?>"><?=htmlspecialchars($d['api'])?></span></div><div class="alert <?= $d['api']==='ok'?'alert-success':'alert-danger' ?> mt-3 mb-0"><?=htmlspecialchars((string)$d['message'])?></div></div></div><div class="mt-4"><a class="btn btn-outline-secondary" href="index.php">Back to Settings</a></div></div></div></div></body></html>
