@@ -132,9 +132,13 @@ function runVoteHubUssd(PDO $pdo, string $sessionId, string $phone, string $text
                 'error'=>$e->getMessage(),
                 'code'=>$e instanceof PaystackException ? $e->codeName : 'PAYSTACK_ERROR',
                 'http'=>$e instanceof PaystackException ? $e->httpStatus : 0,
+                'paystack_status'=>$e instanceof PaystackException && is_array($e->responseData) ? ($e->responseData['status'] ?? null) : null,
+                'paystack_message'=>$e instanceof PaystackException && is_array($e->responseData) ? ($e->responseData['message'] ?? null) : null,
+                'paystack_data'=>$e instanceof PaystackException && is_array($e->responseData) ? ($e->responseData['data'] ?? null) : null,
                 'reference'=>$reference,
                 'provider'=>$provider,
-                'amount'=>$amount
+                'amount'=>$amount,
+                'phone_last4'=>substr($phone,-4)
             ];
             $pdo->prepare("UPDATE transactions SET status='Failed',metadata=? WHERE transaction_reference=?")->execute([json_encode(['source'=>'USSD','session_id'=>$sessionId,'payment_error'=>$safeError],JSON_UNESCAPED_SLASHES),$reference]);
             error_log('[VoteHub USSD Paystack] '.json_encode($safeError,JSON_UNESCAPED_SLASHES));

@@ -36,10 +36,18 @@ try {
             'metadata'=>['votehub_transaction_id'=>$transactionId,'event_id'=>$eventId,'contestant_id'=>(int)$selection['contestant_id'],'vote_count'=>$voteCount,'event_code'=>$selection['event_code'],'contestant_code'=>$selection['contestant_code']]
         ]);
     } catch(Throwable $e) {
-        $safe=['error'=>$e->getMessage(),'code'=>$e instanceof PaystackException?$e->codeName:'PAYSTACK_ERROR','http'=>$e instanceof PaystackException?$e->httpStatus:0];
+        $safe=[
+            'error'=>$e->getMessage(),
+            'code'=>$e instanceof PaystackException?$e->codeName:'PAYSTACK_ERROR',
+            'http'=>$e instanceof PaystackException?$e->httpStatus:0,
+            'paystack_status'=>$e instanceof PaystackException && is_array($e->responseData)?($e->responseData['status']??null):null,
+            'paystack_message'=>$e instanceof PaystackException && is_array($e->responseData)?($e->responseData['message']??null):null,
+            'paystack_data'=>$e instanceof PaystackException && is_array($e->responseData)?($e->responseData['data']??null):null,
+            'request'=>['currency'=>'GHS','amount_subunit'=>$amountSubunit,'provider'=>$provider,'phone_last4'=>substr($phone,-4)],
+        ];
         $pdo->prepare("UPDATE transactions SET status='Failed',metadata=? WHERE id=?")->execute([json_encode(array_merge($meta,$safe),JSON_UNESCAPED_SLASHES),$transactionId]);
         error_log('[VoteHub Paystack] '.json_encode(array_merge(['reference'=>$reference,'transaction_id'=>$transactionId],$safe),JSON_UNESCAPED_SLASHES));
-        jsonResponse(['success'=>false,'message'=>'Payment could not be started. '.$e->getMessage(),'transaction_reference'=>$reference,'diagnostic_code'=>$safe['code']],502);
+        jsonResponse(['success'=>false,'message'=>'Payment could not be started. '.$e->getMessage(),'transaction_reference'=>$reference,'diagnostic_code'=>$safe['code'],'diagnostic_http'=>$safe['http']],502);
     }
 
     $data=$response['data']??[];

@@ -46,10 +46,10 @@ function paystackRequest(string $method, string $endpoint, ?array $payload = nul
     $body=curl_exec($ch); $curlErr=curl_error($ch); $http=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE); curl_close($ch);
     if ($body===false) throw new PaystackException('Paystack connection failed: '.($curlErr ?: 'unknown cURL error'),'CURL_ERROR',$http);
     $data=json_decode($body,true);
-    if (!is_array($data)) throw new PaystackException('Paystack returned an invalid response. HTTP '.$http,'INVALID_RESPONSE',$http);
+    if (!is_array($data)) throw new PaystackException('Paystack returned an invalid response. HTTP '.$http,'INVALID_RESPONSE',$http,null,(string)$body);
     if ($http<200 || $http>=300 || empty($data['status'])) {
         $msg=trim((string)($data['message'] ?? 'Paystack request failed.'));
-        throw new PaystackException($msg,'API_ERROR',$http);
+        throw new PaystackException($msg,'API_ERROR',$http,is_array($data)?$data:null,(string)$body);
     }
     return $data;
 }
