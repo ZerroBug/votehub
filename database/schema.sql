@@ -108,6 +108,7 @@ CREATE TABLE ussd_sessions (
  session_id VARCHAR(150) NOT NULL UNIQUE,
  event_id BIGINT UNSIGNED NULL,
  phone_number VARCHAR(30) NULL,
+ network VARCHAR(40) NULL,
  current_step VARCHAR(80) NULL,
  selected_category_id BIGINT UNSIGNED NULL,
  selected_contestant_id BIGINT UNSIGNED NULL,
@@ -115,7 +116,8 @@ CREATE TABLE ussd_sessions (
  state_data JSON NULL,
  status ENUM('Active','Completed','Expired','Cancelled') NOT NULL DEFAULT 'Active',
  started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
- ended_at DATETIME NULL
+ ended_at DATETIME NULL,
+ last_activity_at DATETIME NULL
 ) ENGINE=InnoDB;
 
 CREATE TABLE audit_logs (

@@ -118,6 +118,11 @@ function fulfillSuccessfulTransaction(PDO $pdo, string $transactionReference, ar
             $tx['phone_number'], $tx['vote_count']
         ]);
 
+        $meta = json_decode((string)$tx['metadata'], true);
+        if (is_array($meta) && !empty($meta['session_id'])) {
+            $pdo->prepare("UPDATE ussd_sessions SET status='Completed',ended_at=NOW(),last_activity_at=NOW() WHERE session_id=?")->execute([(string)$meta['session_id']]);
+        }
+
         $pdo->commit();
         return true;
     } catch (Throwable $e) {

@@ -76,7 +76,7 @@ try {
     }
     $newStateArr['arkesel_path'] = $newPath;
     $newStateArr['arkesel_network'] = $network;
-    $pdo->prepare('UPDATE ussd_sessions SET state_data=? WHERE session_id=?')->execute([json_encode($newStateArr, JSON_UNESCAPED_SLASHES), $sessionId]);
+    $pdo->prepare('UPDATE ussd_sessions SET state_data=?,network=?,last_activity_at=NOW() WHERE session_id=?')->execute([json_encode($newStateArr, JSON_UNESCAPED_SLASHES), $network !== '' ? $network : null, $sessionId]);
 
     $continue = str_starts_with($response, 'CON ');
     $message = preg_replace('/^(CON|END)\s+/', '', $response) ?? $response;

@@ -32,7 +32,7 @@ function runVoteHubUssd(PDO $pdo, string $sessionId, string $phone, string $text
         if (!$events) {
             throw new UssdResponse('END', 'Voting is currently unavailable. No active event is open.');
         }
-        $pdo->prepare("INSERT INTO ussd_sessions(session_id,phone_number,current_step,state_data,status) VALUES(?,?, 'event', ?, 'Active') ON DUPLICATE KEY UPDATE phone_number=VALUES(phone_number),current_step='event',state_data=VALUES(state_data),status='Active'")
+        $pdo->prepare("INSERT INTO ussd_sessions(session_id,phone_number,current_step,state_data,status,last_activity_at) VALUES(?,?, 'event', ?, 'Active',NOW()) ON DUPLICATE KEY UPDATE phone_number=VALUES(phone_number),current_step='event',state_data=VALUES(state_data),status='Active',last_activity_at=NOW()")
             ->execute([$sessionId, $phone, json_encode(['events'=>$events], JSON_UNESCAPED_SLASHES)]);
         $menu = "Welcome to VoteHub\nSelect Event:\n";
         foreach ($events as $i => $event) {
@@ -54,7 +54,7 @@ function runVoteHubUssd(PDO $pdo, string $sessionId, string $phone, string $text
         if ($choice < 1 || $choice > count($events)) throw new UssdResponse('END', 'Invalid event selection. Please try again.');
         $event = $events[$choice - 1];
         $state = ['event_id'=>(int)$event['id'], 'event_name'=>$event['name'], 'event_code'=>$event['event_code']];
-        $pdo->prepare("UPDATE ussd_sessions SET event_id=?,current_step='contestant',state_data=? WHERE session_id=?")
+        $pdo->prepare("UPDATE ussd_sessions SET event_id=?,current_step='contestant',state_data=?,last_activity_at=NOW() WHERE session_id=?")
             ->execute([$event['id'], json_encode($state, JSON_UNESCAPED_SLASHES), $sessionId]);
         throw new UssdResponse('CON', "{$event['name']}\nEnter 4-digit contestant code:");
     }
@@ -72,7 +72,7 @@ function runVoteHubUssd(PDO $pdo, string $sessionId, string $phone, string $text
         $state['category_id'] = (int)$selection['category_id'];
         $state['vote_price'] = (float)$selection['vote_price'];
         $state['max_votes'] = (int)$selection['max_votes_per_transaction'];
-        $pdo->prepare("UPDATE ussd_sessions SET selected_category_id=?,selected_contestant_id=?,current_step='confirm',state_data=? WHERE session_id=?")
+        $pdo->prepare("UPDATE ussd_sessions SET selected_category_id=?,selected_contestant_id=?,current_step='confirm',state_data=?,last_activity_at=NOW() WHERE session_id=?")
             ->execute([$selection['category_id'],$selection['contestant_id'],json_encode($state,JSON_UNESCAPED_SLASHES),$sessionId]);
         throw new UssdResponse('CON', "{$selection['full_name']}\n{$selection['category_name']}\nGHS " . number_format((float)$selection['vote_price'],2) . " per vote\n1. Confirm\n2. Cancel");
     }
@@ -92,7 +92,7 @@ function runVoteHubUssd(PDO $pdo, string $sessionId, string $phone, string $text
         $amount = round((float)$state['vote_price'] * $qty, 2);
         $state['vote_count'] = $qty;
         $state['amount'] = $amount;
-        $pdo->prepare("UPDATE ussd_sessions SET selected_vote_count=?,current_step='provider',state_data=? WHERE session_id=?")
+        $pdo->prepare("UPDATE ussd_sessions SET selected_vote_count=?,current_step='provider',state_data=?,last_activity_at=NOW() WHERE session_id=?")
             ->execute([$qty,json_encode($state,JSON_UNESCAPED_SLASHES),$sessionId]);
         throw new UssdResponse('CON', "{$qty} vote(s) = GHS " . number_format($amount,2) . "\nSelect payment network:\n1. MTN\n2. Telecel\n3. ATMoney/Airtel Money");
     }
@@ -106,7 +106,7 @@ function runVoteHubUssd(PDO $pdo, string $sessionId, string $phone, string $text
         $qty = (int)$state['vote_count'];
         $amount = round((float)$selection['vote_price'] * $qty, 2);
         $reference = generateTransactionReference();
-        $metadata = json_encode(['source'=>'USSD','session_id'=>$sessionId,'event_code'=>$selection['event_code'],'contestant_code'=>$selection['contestant_code']],JSON_UNESCAPED_SLASHES);
+        $metadata = json_encode(['source'=>'USSD','session_id'=>$sessionId,'event_code'=>$selection['event_code'],'contestant_code'=>$selection['contestant_code'],'network'=>$provider],JSON_UNESCAPED_SLASHES);
 
         $stmt = $pdo->prepare("INSERT INTO transactions(transaction_reference,event_id,category_id,contestant_id,phone_number,vote_count,amount,payment_provider,status,metadata) VALUES(?,?,?,?,?,?,?,'Paystack Mobile Money','Pending',?)");
         $stmt->execute([$reference,$eventId,$selection['category_id'],$selection['contestant_id'],$phone,$qty,$amount,$metadata]);
@@ -127,8 +127,8 @@ function runVoteHubUssd(PDO $pdo, string $sessionId, string $phone, string $text
 
         $payData = $response['data'] ?? [];
         $pdo->prepare("UPDATE transactions SET payment_reference=?,metadata=? WHERE transaction_reference=?")
-            ->execute([$payData['reference'] ?? $reference,json_encode(['paystack'=>$payData],JSON_UNESCAPED_SLASHES),$reference]);
-        $pdo->prepare("UPDATE ussd_sessions SET current_step='payment',state_data=? WHERE session_id=?")
+            ->execute([$payData['reference'] ?? $reference,json_encode(['source'=>'USSD','session_id'=>$sessionId,'network'=>$provider,'paystack'=>$payData],JSON_UNESCAPED_SLASHES),$reference]);
+        $pdo->prepare("UPDATE ussd_sessions SET current_step='payment',state_data=?,last_activity_at=NOW() WHERE session_id=?")
             ->execute([json_encode(array_merge($state,['transaction_reference'=>$reference]),JSON_UNESCAPED_SLASHES),$sessionId]);
         throw new UssdResponse('END', 'Payment request sent. Approve GHS ' . number_format($amount,2) . ' on your phone. Ref: ' . $reference . '. Your votes are recorded only after payment is confirmed.');
     }
