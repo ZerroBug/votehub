@@ -1,0 +1,19 @@
+VOTEHUBGH.ORG PRODUCTION CHECKLIST
+
+1. Point votehubgh.org DNS to your hosting server.
+2. Create cPanel MySQL database + user and grant ALL PRIVILEGES.
+3. Upload this package to the domain document root.
+4. Enable SSL/HTTPS.
+5. Open https://votehubgh.org/setup.php.
+6. Enter production database credentials.
+7. Enter a NEW Super Admin email/password.
+8. Enter Paystack TEST key first if staging; use LIVE key only after activation.
+9. Finish installation.
+10. Confirm config/runtime.php and config/secrets.php exist.
+11. Confirm storage/install.lock exists.
+12. Delete setup.php after installation.
+13. In Paystack Live Dashboard set webhook: https://votehubgh.org/api/payment_webhook.php
+14. Test event/category/contestant creation.
+15. Test a payment and confirm exactly one vote.
+16. Connect your Ghana USSD gateway to https://votehubgh.org/api/ussd.php.
+17. Take a database backup before launch.
