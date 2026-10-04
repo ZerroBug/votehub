@@ -56,21 +56,12 @@ The application includes `/api/ussd.php`. Your Ghana USSD aggregator must POST t
 - Do not leave `setup.php` publicly usable after installation.
 - Back up the database regularly.
 
-## Live USSD Bot Simulator
 
-After logging in as Super Admin, open **Live USSD Bot** from the sidebar, or visit:
+## Arkesel USSD integration
 
-`https://votehubgh.org/admin/ussd-simulator.php`
+Arkesel callback URL:
+`https://votehubgh.org/api/ussd_arkesel.php`
 
-The simulator sends the browser session to the same `api/ussd.php` callback used by a real USSD gateway. It supports:
+Arkesel sends JSON POST fields including `sessionID`, `userID`, `newSession`, `msisdn`, `userData`, and `network`. VoteHub maintains the cumulative menu path in `ussd_sessions.state_data`, then passes the reconstructed path to the provider-neutral voting engine. The response is JSON with `sessionID`, `userID`, `msisdn`, `message`, and `continueSession`.
 
-1. Active event selection
-2. 4-digit contestant code lookup
-3. Contestant confirmation
-4. Vote quantity
-5. MTN / Telecel / ATMoney selection
-6. Paystack Mobile Money test charge initiation
-7. Payment verification
-8. Vote recording only after successful payment
-
-Keep Paystack in **Test** mode while testing. The simulator requires a working Super Admin login and a configured Paystack test secret key.
+Configure this callback in the Arkesel USSD dashboard. Start with a shared shortcode/sandbox for testing, then switch to a production shortcode when the full flow has passed real handset tests.
