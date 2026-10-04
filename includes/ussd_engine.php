@@ -110,18 +110,37 @@ function runVoteHubUssd(PDO $pdo, string $sessionId, string $phone, string $text
 
         $stmt = $pdo->prepare("INSERT INTO transactions(transaction_reference,event_id,category_id,contestant_id,phone_number,vote_count,amount,payment_provider,status,metadata) VALUES(?,?,?,?,?,?,?,'Paystack Mobile Money','Pending',?)");
         $stmt->execute([$reference,$eventId,$selection['category_id'],$selection['contestant_id'],$phone,$qty,$amount,$metadata]);
+        $transactionId = (int)$pdo->lastInsertId();
 
         try {
             $response = paystackRequest('POST','/charge',[
-                'amount'=>(string)round($amount*100),
-                'email'=>$phone . '@votehub.local',
+                'amount'=>(int)round($amount*100),
+                'email'=>'voter-' . substr($phone,1) . '@votehubgh.org',
                 'currency'=>'GHS',
                 'reference'=>$reference,
                 'mobile_money'=>['phone'=>$phone,'provider'=>$provider],
-                'metadata'=>json_encode(['votehub_transaction_id'=>(int)$pdo->lastInsertId(),'session_id'=>$sessionId],JSON_UNESCAPED_SLASHES)
+                'metadata'=>[
+                    'votehub_transaction_id'=>$transactionId,
+                    'session_id'=>$sessionId,
+                    'event_id'=>$eventId,
+                    'contestant_id'=>(int)$selection['contestant_id'],
+                    'vote_count'=>$qty
+                ]
             ]);
         } catch (Throwable $e) {
-            $pdo->prepare("UPDATE transactions SET status='Failed',metadata=? WHERE transaction_reference=?")->execute([json_encode(['error'=>$e->getMessage()]),$reference]);
+            $safeError = [
+                'error'=>$e->getMessage(),
+                'code'=>$e instanceof PaystackException ? $e->codeName : 'PAYSTACK_ERROR',
+                'http'=>$e instanceof PaystackException ? $e->httpStatus : 0,
+                'reference'=>$reference,
+                'provider'=>$provider,
+                'amount'=>$amount
+            ];
+            $pdo->prepare("UPDATE transactions SET status='Failed',metadata=? WHERE transaction_reference=?")->execute([json_encode(['source'=>'USSD','session_id'=>$sessionId,'payment_error'=>$safeError],JSON_UNESCAPED_SLASHES),$reference]);
+            error_log('[VoteHub USSD Paystack] '.json_encode($safeError,JSON_UNESCAPED_SLASHES));
+            if (!headers_sent()) {
+                header('X-VoteHub-Payment-Diagnostic: '.rawurlencode((string)$safeError['code'].' | HTTP '.$safeError['http'].' | '.$safeError['error']));
+            }
             throw new UssdResponse('END', 'Payment could not be started. Please try again.');
         }
 
