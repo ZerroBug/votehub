@@ -1,6 +1,7 @@
 <aside class="sidebar" id="sidebar">
 <div class="brand"><div class="brand-icon"><i class="bi bi-broadcast-pin"></i></div><div><strong>VoteHub</strong><small>USSD VOTING PLATFORM</small></div></div>
 <div class="nav-label">MAIN</div><nav>
+<a href="<?=APP_URL?>/vote/"><i class="bi bi-check2-square"></i> Public Voting</a>
 <a href="<?=APP_URL?>/admin/dashboard.php"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
 <a href="<?=APP_URL?>/admin/ussd-simulator.php"><i class="bi bi-phone"></i> Live USSD Bot</a>
 <a href="<?=APP_URL?>/admin/ussd/"><i class="bi bi-activity"></i> USSD Monitor</a>
