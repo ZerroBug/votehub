@@ -351,7 +351,7 @@ require __DIR__ . '/../../includes/sidebar.php';
                             <div class="d-flex justify-content-between gap-2">
                                 <div class="fw-semibold text-truncate"><?= e($r['full_name']) ?></div>
                                 <?php if ($rank === 1): ?><span
-                                    class="badge bg-warning text-dark winner-badge">LEADER</span><?php endif; ?>
+                                    class="badge bg-warning text-dark winner-badge">WINNER</span><?php endif; ?>
                             </div>
                             <small class="text-secondary">Code: <?= e($r['contestant_code']) ?></small>
                             <div class="progress mt-2">
