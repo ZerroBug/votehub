@@ -18,18 +18,9 @@ $events=$pdo->query("SELECT id,name,event_code,status FROM events ORDER BY CASE 
 
 $allCategories=$pdo->query("SELECT id,event_id,name,category_code,status FROM categories WHERE status='Active' ORDER BY event_id,display_order,name")->fetchAll();
 
-// CSRF protection for contestant create/edit operations.
-if (empty($_SESSION['contestant_csrf_token'])) {
-    $_SESSION['contestant_csrf_token'] = bin2hex(random_bytes(32));
-}
-$contestantCsrfToken = $_SESSION['contestant_csrf_token'];
+
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
-    $submittedToken = (string)($_POST['csrf_token'] ?? '');
-    if (!hash_equals($contestantCsrfToken, $submittedToken)) {
-        flash('danger', 'Your session security token is invalid or expired. Please refresh the page and try again.');
-        redirect('index.php' . ($selectedEventId ? '?event_id=' . $selectedEventId . ($selectedCategoryId ? '&category_id=' . $selectedCategoryId : '') : ''));
-    }
     $action=$_POST['action']??'add';
     $eventId=(int)($_POST['event_id']??0);
     $categoryId=(int)($_POST['category_id']??0);
@@ -37,12 +28,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
     if($action==='edit'){
         $contestantId=(int)($_POST['contestant_id']??0);
-        $code=trim($_POST['contestant_code']??'');
         $gender=$_POST['gender']??'Female';
         $biography=trim($_POST['biography']??'');
         $status=$_POST['status']??'Active';
-        if(!$contestantId||!$eventId||!$categoryId||!$name||!preg_match('/^\d{4}$/',$code)){
-            flash('danger','Contestant ID, event, category, name and a valid 4-digit code are required.');
+        if(!$contestantId||!$eventId||!$categoryId||!$name){
+            flash('danger','Contestant ID, event, category and contestant name are required.');
         } elseif(!in_array($gender,['Male','Female','Other'],true) || !in_array($status,['Active','Inactive','Disqualified'],true)){
             flash('danger','Invalid gender or status selected.');
         } else {
@@ -53,27 +43,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $stmt=$pdo->prepare("SELECT id FROM categories WHERE id=? AND event_id=? AND status='Active'");
                 $stmt->execute([$categoryId,$eventId]);
                 if(!$stmt->fetch()) throw new RuntimeException('The selected category does not belong to the selected event.');
-                $stmt=$pdo->prepare("SELECT id FROM contestants WHERE event_id=? AND contestant_code=? AND id<>? LIMIT 1");
-                $stmt->execute([$eventId,$code,$contestantId]);
-                if($stmt->fetch()) throw new RuntimeException("The 4-digit code {$code} is already assigned to another contestant in this event.");
-                // Update the existing contestant record in place so all existing
-                // votes/transactions that reference contestant_id remain intact.
-                $pdo->beginTransaction();
-                try {
-                    $stmt=$pdo->prepare("UPDATE contestants SET category_id=?,contestant_code=?,full_name=?,gender=?,biography=?,status=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND event_id=?");
-                    $stmt->execute([$categoryId,$code,$name,$gender,$biography,$status,$contestantId,$eventId]);
-                    if ($stmt->rowCount() === 0) {
-                        // rowCount can be zero when values are unchanged; confirm the row still exists.
-                        $check=$pdo->prepare("SELECT id FROM contestants WHERE id=? AND event_id=?");
-                        $check->execute([$contestantId,$eventId]);
-                        if (!$check->fetch()) throw new RuntimeException('Contestant was not found during update.');
-                    }
-                    $pdo->commit();
-                } catch (Throwable $updateError) {
-                    if ($pdo->inTransaction()) $pdo->rollBack();
-                    throw $updateError;
-                }
-                flash('success','Contestant updated successfully. Existing votes were preserved.');
+                // contestant_code is intentionally immutable after creation.
+                $stmt=$pdo->prepare("UPDATE contestants SET category_id=?,full_name=?,gender=?,biography=?,status=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND event_id=?");
+                $stmt->execute([$categoryId,$name,$gender,$biography,$status,$contestantId,$eventId]);
+                flash('success','Contestant updated successfully.');
                 redirect("index.php?event_id={$eventId}&category_id={$categoryId}");
             }catch(Throwable $e){flash('danger','Could not update contestant: '.$e->getMessage());}
         }
@@ -319,7 +292,6 @@ $pageTitle='Contestants';require_once __DIR__.'/../../includes/header.php';requi
                     <div class="panel-body">
 
                         <form method="post">
-                            <input type="hidden" name="csrf_token" value="<?=e($contestantCsrfToken)?>">
 
                             <label class="form-label">Event *</label><select name="event_id" id="eventSelect"
                                 class="form-select mb-3" required>
@@ -416,7 +388,6 @@ $pageTitle='Contestants';require_once __DIR__.'/../../includes/header.php';requi
                     </div>
                     <form method="post">
                         <div class="modal-body">
-                            <input type="hidden" name="csrf_token" value="<?=e($contestantCsrfToken)?>">
                             <input type="hidden" name="action" value="edit">
                             <input type="hidden" name="contestant_id" id="editContestantId">
                             <input type="hidden" name="event_id" id="editEventId" value="<?=e($selectedEventId)?>">
@@ -429,11 +400,11 @@ $pageTitle='Contestants';require_once __DIR__.'/../../includes/header.php';requi
                                 <div class="col-md-6"><label class="form-label">Full Name <span
                                             class="text-danger">*</span></label><input type="text" name="full_name"
                                         id="editFullName" class="form-control" required></div>
-                                <div class="col-md-6"><label class="form-label">4-Digit Voting Code <span
-                                            class="text-danger">*</span></label><input type="text"
-                                        name="contestant_code" id="editContestantCode" class="form-control"
-                                        inputmode="numeric" maxlength="4" pattern="[0-9]{4}" required>
-                                    <div class="form-help">Exactly four digits and unique within this event.</div>
+                                <div class="col-md-6"><label class="form-label">4-Digit Voting Code</label><input
+                                        type="text" id="editContestantCode" class="form-control" readonly
+                                        aria-readonly="true">
+                                    <div class="form-help">This voting code is permanent and cannot be changed after the
+                                        contestant is created.</div>
                                 </div>
                                 <div class="col-md-6"><label class="form-label">Category <span
                                             class="text-danger">*</span></label><select name="category_id"
