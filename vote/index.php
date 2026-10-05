@@ -7,13 +7,13 @@ require_once __DIR__ . '/../config/app.php';
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vote Online — VoteHub</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 <link href="<?=htmlspecialchars(APP_URL,ENT_QUOTES)?>/assets/css/app.css" rel="stylesheet">
 <style>
 body{background:#f5f7fb}.vote-shell{max-width:1180px;margin:0 auto;padding:32px 16px}.vote-brand{display:flex;align-items:center;gap:12px}.vote-brand .icon{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:#0f6b2e;color:#fff;font-size:22px}.hero{background:linear-gradient(135deg,#0b4f22,#0f6b2e);color:#fff;border-radius:24px;padding:34px;margin-bottom:24px}.hero h1{font-weight:800}.cardx{background:#fff;border:1px solid #e7ebf0;border-radius:18px;box-shadow:0 10px 30px rgba(16,24,40,.06)}.contestant{cursor:pointer;border:2px solid transparent;border-radius:16px;padding:14px;height:100%;transition:.18s}.contestant:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.08)}.contestant.selected{border-color:#f4c430;background:#fffdf1}.photo{width:74px;height:74px;border-radius:16px;object-fit:cover;background:#e9eef1;display:grid;place-items:center;font-weight:800;color:#0f6b2e}.code{font-family:monospace;background:#eef7f0;color:#0b4f22;padding:3px 7px;border-radius:7px}.price{font-weight:800;color:#0f6b2e}.sticky{position:sticky;top:20px}.step{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#0f6b2e;color:#fff;font-weight:700}.small-muted{font-size:.86rem;color:#6b7280}.success-box{background:#eefbf1;border:1px solid #b7e3c0;border-radius:14px;padding:18px}.pending-box{background:#fff8e5;border:1px solid #f4d98b;border-radius:14px;padding:18px}.error-box{background:#fff0f0;border:1px solid #f1b4b4;border-radius:14px;padding:18px}
 </style>
-</head>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"></head>
 <body>
 <div class="vote-shell">
 <header class="d-flex justify-content-between align-items-center mb-4"><div class="vote-brand"><div class="icon"><i class="bi bi-broadcast-pin"></i></div><div><strong class="fs-5">VoteHub</strong><div class="small-muted">Secure online voting</div></div></div><a href="<?=htmlspecialchars(APP_URL,ENT_QUOTES)?>/" class="btn btn-outline-secondary btn-sm">Home</a></header>
