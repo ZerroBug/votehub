@@ -391,20 +391,21 @@ $pageTitle='Contestants';require_once __DIR__.'/../../includes/header.php';requi
                             <input type="hidden" name="action" value="edit">
                             <input type="hidden" name="contestant_id" id="editContestantId">
                             <input type="hidden" name="event_id" id="editEventId" value="<?=e($selectedEventId)?>">
-                            <div class="alert alert-warning d-flex gap-2 align-items-start mb-4"><i
-                                    class="bi bi-shield-exclamation"></i>
-                                <div><strong>Important:</strong> Changing the code changes the code voters use for
-                                    future votes. Existing votes remain attached to this contestant.</div>
+                            <div class="alert alert-info d-flex gap-2 align-items-start mb-4"><i
+                                    class="bi bi-lock-fill"></i>
+                                <div><strong>Voting code locked:</strong> This 4-digit contestant code is permanent and
+                                    cannot be edited after the contestant is created.</div>
                             </div>
                             <div class="row g-3">
                                 <div class="col-md-6"><label class="form-label">Full Name <span
                                             class="text-danger">*</span></label><input type="text" name="full_name"
                                         id="editFullName" class="form-control" required></div>
-                                <div class="col-md-6"><label class="form-label">4-Digit Voting Code</label><input
-                                        type="text" id="editContestantCode" class="form-control" readonly
-                                        aria-readonly="true">
-                                    <div class="form-help">This voting code is permanent and cannot be changed after the
-                                        contestant is created.</div>
+                                <div class="col-md-6"><label class="form-label">4-Digit Voting Code</label>
+                                    <div id="editContestantCode" class="form-control bg-light fw-bold"
+                                        aria-readonly="true" tabindex="-1"
+                                        style="pointer-events:none;user-select:none;cursor:not-allowed;"></div>
+                                    <div class="form-help"><i class="bi bi-lock-fill me-1"></i>Permanent code — editing
+                                        is disabled.</div>
                                 </div>
                                 <div class="col-md-6"><label class="form-label">Category <span
                                             class="text-danger">*</span></label><select name="category_id"
@@ -468,6 +469,33 @@ $pageTitle='Contestants';require_once __DIR__.'/../../includes/header.php';requi
 
 
 
+<style>
+#editContestantModal {
+    z-index: 5000 !important;
+}
+
+#editContestantModal .modal-dialog {
+    position: relative;
+    z-index: 5001;
+}
+
+#editContestantModal .modal-content {
+    position: relative;
+    z-index: 5002;
+}
+
+.modal-backdrop {
+    z-index: 4990 !important;
+}
+
+#editContestantCode {
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    background: #f3f4f6 !important;
+}
+</style>
+
 <script>
 const allCategories = <?=json_encode($allCategories,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;
 
@@ -500,13 +528,24 @@ function populateCategories(eventId, selectedId = '') {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Move the Bootstrap modal to <body> so sidebar/main stacking contexts can never cover it.
+    const editModal = document.getElementById('editContestantModal');
+    if (editModal && editModal.parentElement !== document.body) document.body.appendChild(editModal);
+    if (editModal) {
+        editModal.style.zIndex = '5000';
+        editModal.addEventListener('shown.bs.modal', () => {
+            editModal.style.zIndex = '5000';
+            const backdrop = document.querySelector('.modal-backdrop:last-of-type');
+            if (backdrop) backdrop.style.zIndex = '4990';
+        });
+    }
     document.querySelectorAll('.edit-contestant').forEach(btn => {
         btn.addEventListener('click', () => {
             const d = btn.dataset;
             document.getElementById('editContestantId').value = d.id || '';
             document.getElementById('editEventId').value = d.eventId || '';
             document.getElementById('editFullName').value = d.name || '';
-            document.getElementById('editContestantCode').value = d.code || '';
+            document.getElementById('editContestantCode').textContent = d.code || '';
             document.getElementById('editGender').value = d.gender || 'Female';
             document.getElementById('editStatus').value = d.status || 'Active';
             document.getElementById('editBiography').value = d.biography || '';
