@@ -23,7 +23,6 @@ CREATE TABLE events (
  end_date DATETIME NOT NULL,
  status ENUM('Draft','Scheduled','Active','Paused','Closed','Archived') NOT NULL DEFAULT 'Draft',
  default_vote_price DECIMAL(12,2) NOT NULL DEFAULT 1.00,
- admin_revenue_percentage DECIMAL(5,2) NOT NULL DEFAULT 30.00,
  ussd_code VARCHAR(30) NULL,
  created_by BIGINT UNSIGNED NOT NULL,
  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -75,7 +74,6 @@ CREATE TABLE transactions (
  phone_number VARCHAR(30) NOT NULL,
  vote_count INT UNSIGNED NOT NULL,
  amount DECIMAL(12,2) NOT NULL,
- admin_revenue_percentage DECIMAL(5,2) NOT NULL DEFAULT 30.00,
  payment_provider VARCHAR(80) NULL,
  payment_reference VARCHAR(150) NULL,
  status ENUM('Pending','Successful','Failed','Cancelled','Refunded') NOT NULL DEFAULT 'Pending',
@@ -110,7 +108,6 @@ CREATE TABLE ussd_sessions (
  session_id VARCHAR(150) NOT NULL UNIQUE,
  event_id BIGINT UNSIGNED NULL,
  phone_number VARCHAR(30) NULL,
- network VARCHAR(40) NULL,
  current_step VARCHAR(80) NULL,
  selected_category_id BIGINT UNSIGNED NULL,
  selected_contestant_id BIGINT UNSIGNED NULL,
@@ -118,8 +115,7 @@ CREATE TABLE ussd_sessions (
  state_data JSON NULL,
  status ENUM('Active','Completed','Expired','Cancelled') NOT NULL DEFAULT 'Active',
  started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
- ended_at DATETIME NULL,
- last_activity_at DATETIME NULL
+ ended_at DATETIME NULL
 ) ENGINE=InnoDB;
 
 CREATE TABLE audit_logs (
@@ -145,27 +141,4 @@ CREATE TABLE IF NOT EXISTS webhook_events (
  processed_at DATETIME NULL,
  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
  INDEX(event_name), INDEX(processed_at)
-) ENGINE=InnoDB;
-
-
-CREATE TABLE client_cashouts (
- id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
- event_id BIGINT UNSIGNED NOT NULL,
- requested_amount DECIMAL(12,2) NOT NULL,
- status ENUM('Requested','Approved','Paid','Rejected','Cancelled') NOT NULL DEFAULT 'Requested',
- payment_method VARCHAR(80) NULL,
- account_name VARCHAR(150) NULL,
- account_number VARCHAR(100) NULL,
- mobile_number VARCHAR(30) NULL,
- reference VARCHAR(150) NULL,
- notes TEXT NULL,
- requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
- approved_at DATETIME NULL,
- paid_at DATETIME NULL,
- processed_by BIGINT UNSIGNED NULL,
- created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
- updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
- FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
- FOREIGN KEY(processed_by) REFERENCES users(id) ON DELETE SET NULL,
- INDEX(event_id), INDEX(status), INDEX(requested_at)
 ) ENGINE=InnoDB;

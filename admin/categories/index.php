@@ -45,14 +45,14 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 <?php showFlash(); ?>
 <div class="d-flex justify-content-between align-items-end mb-4">
  <div><span class="section-kicker">EVENT CATEGORIES</span><h1 class="page-title mb-1"><?=e($event['name'])?></h1><p class="page-subtitle mb-0"><span class="code-pill"><?=e($event['event_code'])?></span> Create and manage voting categories.</p></div>
- <div class="d-flex gap-2"><a href="create.php" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New Category</a><a href="../events/view.php?id=<?=$eventId?>" class="btn btn-light border"><i class="bi bi-arrow-left me-1"></i>Back to Event</a></div>
+ <a href="../events/view.php?id=<?=$eventId?>" class="btn btn-light border"><i class="bi bi-arrow-left me-1"></i>Back to Event</a>
 </div>
 <div class="row g-4">
  <div class="col-xl-8">
   <div class="panel">
    <div class="panel-head"><div><h5>Category Directory</h5><small class="text-secondary">Category codes are generated automatically.</small></div><span class="mini-stat"><?=count($cats)?> categories</span></div>
    <div class="table-responsive"><table class="table mb-0 align-middle">
-    <thead><tr><th>#</th><th>Category</th><th>Code</th><th>Price</th><th>Contestants</th><th>Status</th><th></th></tr></thead>
+    <thead><tr><th>#</th><th>Category</th><th>Code</th><th>Price</th><th>Contestants</th><th>Status</th></tr></thead>
     <tbody>
     <?php foreach($cats as $c): ?><tr>
      <td><?=e($c['display_order'])?></td>
@@ -61,7 +61,6 @@ require_once __DIR__ . '/../../includes/sidebar.php';
      <td>GHS <?=number_format((float)$c['vote_price'],2)?></td>
      <td><span class="count-chip"><?= (int)$c['contestant_count']?></span></td>
      <td><span class="badge-soft badge-<?=$c['status']==='Active'?'live':'draft'?>"><?=e($c['status'])?></span></td>
-     <td class="text-end"><a href="edit.php?id=<?=$c['id']?>" class="btn btn-sm btn-light border"><i class="bi bi-pencil"></i></a> <a href="delete.php?id=<?=$c['id']?>" onclick="return confirm('Delete/deactivate this category?')" class="btn btn-sm btn-light border"><i class="bi bi-trash"></i></a></td>
     </tr><?php endforeach; ?>
     <?php if(!$cats): ?><tr><td colspan="6" class="text-center py-5 text-secondary"><i class="bi bi-diagram-3 fs-2 d-block mb-2"></i>No categories yet.</td></tr><?php endif; ?>
     </tbody>
