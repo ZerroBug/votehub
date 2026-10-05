@@ -80,3 +80,28 @@ function generateContestantTicketCode(PDO $pdo, int $eventId, int $categoryId): 
 
     throw new RuntimeException('All 4-digit contestant codes for this event have been used.');
 }
+
+/**
+ * Returns the two-party revenue split for an event.
+ * The stored percentage is the VoteHub/Admin share; the client receives the balance.
+ */
+function getEventRevenueSplit(array $event): array {
+    $admin = isset($event['admin_revenue_percentage']) ? (float)$event['admin_revenue_percentage'] : 30.00;
+    $admin = max(0.00, min(100.00, $admin));
+    return [
+        'admin_percentage' => $admin,
+        'client_percentage' => round(100.00 - $admin, 2),
+    ];
+}
+
+function calculateEventRevenueSplit(float $grossRevenue, float $adminPercentage): array {
+    $adminPercentage = max(0.00, min(100.00, $adminPercentage));
+    $adminAmount = round($grossRevenue * ($adminPercentage / 100), 2);
+    return [
+        'gross' => round($grossRevenue, 2),
+        'admin_percentage' => $adminPercentage,
+        'admin_amount' => $adminAmount,
+        'client_percentage' => round(100.00 - $adminPercentage, 2),
+        'client_amount' => round($grossRevenue - $adminAmount, 2),
+    ];
+}

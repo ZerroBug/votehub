@@ -1,19 +1,26 @@
-VOTEHUBGH.ORG PRODUCTION CHECKLIST
+VOTEHUB PRODUCTION CHECKLIST
 
-1. Point votehubgh.org DNS to your hosting server.
-2. Create cPanel MySQL database + user and grant ALL PRIVILEGES.
-3. Upload this package to the domain document root.
-4. Enable SSL/HTTPS.
-5. Open https://votehubgh.org/setup.php.
-6. Enter production database credentials.
-7. Enter a NEW Super Admin email/password.
-8. Enter Paystack TEST key first if staging; use LIVE key only after activation.
-9. Finish installation.
-10. Confirm config/runtime.php and config/secrets.php exist.
-11. Confirm storage/install.lock exists.
-12. Delete setup.php after installation.
-13. In Paystack Live Dashboard set webhook: https://votehubgh.org/api/payment_webhook.php
-14. Test event/category/contestant creation.
-15. Test a payment and confirm exactly one vote.
-16. Connect your Ghana USSD gateway to https://votehubgh.org/api/ussd.php.
-17. Take a database backup before launch.
+[ ] Hostinger PHP 8.1+ / PDO MySQL / cURL enabled
+[ ] HTTPS active for votehubgh.org
+[ ] Database created and least-privilege user assigned
+[ ] setup.php completed
+[ ] storage/install.lock exists
+[ ] setup.php removed or blocked after installation
+[ ] Super Admin login tested
+[ ] Event created
+[ ] Category created
+[ ] Contestants created with 4-digit codes
+[ ] Live USSD simulator tested
+[ ] Paystack Test transaction succeeds
+[ ] Failed/cancelled payment creates NO vote
+[ ] Duplicate webhook creates NO duplicate vote
+[ ] Arkesel callback configured
+[ ] Real phone USSD tested on MTN
+[ ] Real phone USSD tested on Telecel
+[ ] Real phone USSD tested on AT
+[ ] USSD monitor checked
+[ ] Reconciliation checked
+[ ] Live results checked
+[ ] Database backup configured
+[ ] Paystack Live configured only after all tests pass
+[ ] Arkesel production/shared shortcode confirmed
