@@ -18,9 +18,18 @@ $events=$pdo->query("SELECT id,name,event_code,status FROM events ORDER BY CASE 
 
 $allCategories=$pdo->query("SELECT id,event_id,name,category_code,status FROM categories WHERE status='Active' ORDER BY event_id,display_order,name")->fetchAll();
 
-
+// CSRF protection for contestant create/edit operations.
+if (empty($_SESSION['contestant_csrf_token'])) {
+    $_SESSION['contestant_csrf_token'] = bin2hex(random_bytes(32));
+}
+$contestantCsrfToken = $_SESSION['contestant_csrf_token'];
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
+    $submittedToken = (string)($_POST['csrf_token'] ?? '');
+    if (!hash_equals($contestantCsrfToken, $submittedToken)) {
+        flash('danger', 'Your session security token is invalid or expired. Please refresh the page and try again.');
+        redirect('index.php' . ($selectedEventId ? '?event_id=' . $selectedEventId . ($selectedCategoryId ? '&category_id=' . $selectedCategoryId : '') : ''));
+    }
     $action=$_POST['action']??'add';
     $eventId=(int)($_POST['event_id']??0);
     $categoryId=(int)($_POST['category_id']??0);
@@ -47,9 +56,24 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $stmt=$pdo->prepare("SELECT id FROM contestants WHERE event_id=? AND contestant_code=? AND id<>? LIMIT 1");
                 $stmt->execute([$eventId,$code,$contestantId]);
                 if($stmt->fetch()) throw new RuntimeException("The 4-digit code {$code} is already assigned to another contestant in this event.");
-                $stmt=$pdo->prepare("UPDATE contestants SET category_id=?,contestant_code=?,full_name=?,gender=?,biography=?,status=? WHERE id=? AND event_id=?");
-                $stmt->execute([$categoryId,$code,$name,$gender,$biography,$status,$contestantId,$eventId]);
-                flash('success','Contestant updated successfully.');
+                // Update the existing contestant record in place so all existing
+                // votes/transactions that reference contestant_id remain intact.
+                $pdo->beginTransaction();
+                try {
+                    $stmt=$pdo->prepare("UPDATE contestants SET category_id=?,contestant_code=?,full_name=?,gender=?,biography=?,status=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND event_id=?");
+                    $stmt->execute([$categoryId,$code,$name,$gender,$biography,$status,$contestantId,$eventId]);
+                    if ($stmt->rowCount() === 0) {
+                        // rowCount can be zero when values are unchanged; confirm the row still exists.
+                        $check=$pdo->prepare("SELECT id FROM contestants WHERE id=? AND event_id=?");
+                        $check->execute([$contestantId,$eventId]);
+                        if (!$check->fetch()) throw new RuntimeException('Contestant was not found during update.');
+                    }
+                    $pdo->commit();
+                } catch (Throwable $updateError) {
+                    if ($pdo->inTransaction()) $pdo->rollBack();
+                    throw $updateError;
+                }
+                flash('success','Contestant updated successfully. Existing votes were preserved.');
                 redirect("index.php?event_id={$eventId}&category_id={$categoryId}");
             }catch(Throwable $e){flash('danger','Could not update contestant: '.$e->getMessage());}
         }
@@ -125,11 +149,9 @@ $pageTitle='Contestants';require_once __DIR__.'/../../includes/header.php';requi
                 <div class="row g-3 align-items-end">
 
                     <div class="col-lg-5"><label class="form-label">Select Event</label><select id="eventFilter"
-
                             class="form-select">
 
                             <option value="">Choose an event...</option><?php foreach($events as $ev):?><option
-
                                 value="<?=$ev['id']?>" <?=$selectedEventId==(int)$ev['id']?'selected':''?>>
 
                                 <?=e($ev['name'])?> — <?=e($ev['event_code'])?> (<?=e($ev['status'])?>)</option>
@@ -139,13 +161,11 @@ $pageTitle='Contestants';require_once __DIR__.'/../../includes/header.php';requi
                         </select></div>
 
                     <div class="col-lg-5"><label class="form-label">Filter by Category</label><select
-
                             id="categoryFilter" class="form-select" <?=$selectedEventId?'':'disabled'?>>
 
                             <option value="">All categories</option>
 
                             <?php foreach($allCategories as $c): if((int)$c['event_id']===$selectedEventId):?><option
-
                                 value="<?=$c['id']?>" <?=$selectedCategoryId==(int)$c['id']?'selected':''?>>
 
                                 <?=e($c['name'])?> — <?=e($c['category_code'])?></option><?php endif; endforeach;?>
@@ -153,11 +173,8 @@ $pageTitle='Contestants';require_once __DIR__.'/../../includes/header.php';requi
                         </select></div>
 
                     <div class="col-lg-2"><a id="filterButton"
-
                             href="<?=$selectedEventId?'index.php?event_id='.$selectedEventId:'#'?>"
-
                             class="btn btn-primary w-100 <?=$selectedEventId?'':'disabled'?>"><i
-
                                 class="bi bi-funnel me-1"></i>View</a></div>
 
                 </div>
@@ -236,7 +253,6 @@ $pageTitle='Contestants';require_once __DIR__.'/../../includes/header.php';requi
                                                 <?=e(strtoupper(substr($x['full_name'],0,2)))?></div>
 
                                             <div><strong><?=e($x['full_name'])?></strong><small
-
                                                     class="d-block text-secondary"><?=e($x['gender'])?></small></div>
 
                                         </div>
@@ -244,7 +260,6 @@ $pageTitle='Contestants';require_once __DIR__.'/../../includes/header.php';requi
                                     </td>
 
                                     <td><strong><?=e($x['category_name'])?></strong><small
-
                                             class="d-block text-secondary"><?=e($x['category_code'])?></small></td>
 
                                     <td><span class="ticket-code"><?=e($x['contestant_code'])?></span></td>
@@ -253,10 +268,14 @@ $pageTitle='Contestants';require_once __DIR__.'/../../includes/header.php';requi
 
                                     <td><span class="badge-soft badge-live"><?=e($x['status'])?></span></td>
                                     <td class="text-end">
-                                        <button type="button" class="btn btn-sm btn-outline-primary edit-contestant" data-bs-toggle="modal" data-bs-target="#editContestantModal"
-                                            data-id="<?=e($x['id'])?>" data-event-id="<?=e($x['event_id'])?>" data-category-id="<?=e($x['category_id'])?>"
-                                            data-code="<?=e($x['contestant_code'])?>" data-name="<?=e($x['full_name'])?>" data-gender="<?=e($x['gender'])?>"
-                                            data-status="<?=e($x['status'])?>" data-biography="<?=e($x['biography']??'')?>">
+                                        <button type="button" class="btn btn-sm btn-outline-primary edit-contestant"
+                                            data-bs-toggle="modal" data-bs-target="#editContestantModal"
+                                            data-id="<?=e($x['id'])?>" data-event-id="<?=e($x['event_id'])?>"
+                                            data-category-id="<?=e($x['category_id'])?>"
+                                            data-code="<?=e($x['contestant_code'])?>"
+                                            data-name="<?=e($x['full_name'])?>" data-gender="<?=e($x['gender'])?>"
+                                            data-status="<?=e($x['status'])?>"
+                                            data-biography="<?=e($x['biography']??'')?>">
                                             <i class="bi bi-pencil-square me-1"></i>Edit
                                         </button>
                                     </td>
@@ -265,7 +284,6 @@ $pageTitle='Contestants';require_once __DIR__.'/../../includes/header.php';requi
                                 <?php if(!$contestants):?><tr>
 
                                     <td colspan="7" class="text-center py-5 text-secondary"><i
-
                                             class="bi bi-people fs-2 d-block mb-2"></i>No contestants found.</td>
 
                                 </tr><?php endif;?>
@@ -301,13 +319,12 @@ $pageTitle='Contestants';require_once __DIR__.'/../../includes/header.php';requi
                     <div class="panel-body">
 
                         <form method="post">
+                            <input type="hidden" name="csrf_token" value="<?=e($contestantCsrfToken)?>">
 
                             <label class="form-label">Event *</label><select name="event_id" id="eventSelect"
-
                                 class="form-select mb-3" required>
 
                                 <option value="">Select event</option><?php foreach($events as $ev):?><option
-
                                     value="<?=$ev['id']?>" <?=$selectedEventId==(int)$ev['id']?'selected':''?>>
 
                                     <?=e($ev['name'])?> — <?=e($ev['event_code'])?></option><?php endforeach;?>
@@ -315,7 +332,6 @@ $pageTitle='Contestants';require_once __DIR__.'/../../includes/header.php';requi
                             </select>
 
                             <label class="form-label">Category *</label><select name="category_id" id="categorySelect"
-
                                 class="form-select mb-2" required>
 
                                 <option value="">Select event first</option>
@@ -335,7 +351,6 @@ $pageTitle='Contestants';require_once __DIR__.'/../../includes/header.php';requi
                             <div class="ticket-preview mb-3">
 
                                 <div><small>AUTO-GENERATED 4-DIGIT VOTING CODE</small><strong
-
                                         id="ticketPreview">----</strong></div><i class="bi bi-ticket-perforated"></i>
 
                             </div>
@@ -345,7 +360,6 @@ $pageTitle='Contestants';require_once __DIR__.'/../../includes/header.php';requi
                                 during USSD to retrieve the contestant before voting.</div>
 
                             <label class="form-label">Full Name *</label><input name="full_name"
-
                                 class="form-control mb-3" required placeholder="Ama Serwaa">
 
                             <label class="form-label">Gender</label><select name="gender" class="form-select mb-3">
@@ -361,7 +375,6 @@ $pageTitle='Contestants';require_once __DIR__.'/../../includes/header.php';requi
 
 
                             <label class="form-label">Biography</label><textarea name="biography"
-
                                 class="form-control mb-3" rows="3"></textarea>
 
                             <label class="form-label">Status</label><select name="status" class="form-select mb-4">
@@ -391,29 +404,60 @@ $pageTitle='Contestants';require_once __DIR__.'/../../includes/header.php';requi
 
 
         <!-- Edit Contestant Modal -->
-        <div class="modal fade" id="editContestantModal" tabindex="-1" aria-labelledby="editContestantModalLabel" aria-hidden="true">
+        <div class="modal fade" id="editContestantModal" tabindex="-1" aria-labelledby="editContestantModalLabel"
+            aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content border-0 shadow-lg">
                     <div class="modal-header">
-                        <div><span class="section-kicker">CONTESTANT MANAGEMENT</span><h5 class="modal-title mb-0" id="editContestantModalLabel">Edit Contestant</h5></div>
+                        <div><span class="section-kicker">CONTESTANT MANAGEMENT</span>
+                            <h5 class="modal-title mb-0" id="editContestantModalLabel">Edit Contestant</h5>
+                        </div>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <form method="post">
                         <div class="modal-body">
+                            <input type="hidden" name="csrf_token" value="<?=e($contestantCsrfToken)?>">
                             <input type="hidden" name="action" value="edit">
                             <input type="hidden" name="contestant_id" id="editContestantId">
                             <input type="hidden" name="event_id" id="editEventId" value="<?=e($selectedEventId)?>">
-                            <div class="alert alert-warning d-flex gap-2 align-items-start mb-4"><i class="bi bi-shield-exclamation"></i><div><strong>Important:</strong> Changing the code changes the code voters use for future votes. Existing votes remain attached to this contestant.</div></div>
+                            <div class="alert alert-warning d-flex gap-2 align-items-start mb-4"><i
+                                    class="bi bi-shield-exclamation"></i>
+                                <div><strong>Important:</strong> Changing the code changes the code voters use for
+                                    future votes. Existing votes remain attached to this contestant.</div>
+                            </div>
                             <div class="row g-3">
-                                <div class="col-md-6"><label class="form-label">Full Name <span class="text-danger">*</span></label><input type="text" name="full_name" id="editFullName" class="form-control" required></div>
-                                <div class="col-md-6"><label class="form-label">4-Digit Voting Code <span class="text-danger">*</span></label><input type="text" name="contestant_code" id="editContestantCode" class="form-control" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" required><div class="form-help">Exactly four digits and unique within this event.</div></div>
-                                <div class="col-md-6"><label class="form-label">Category <span class="text-danger">*</span></label><select name="category_id" id="editCategorySelect" class="form-select" required></select></div>
-                                <div class="col-md-3"><label class="form-label">Gender</label><select name="gender" id="editGender" class="form-select"><option value="Female">Female</option><option value="Male">Male</option><option value="Other">Other</option></select></div>
-                                <div class="col-md-3"><label class="form-label">Status</label><select name="status" id="editStatus" class="form-select"><option value="Active">Active</option><option value="Inactive">Inactive</option><option value="Disqualified">Disqualified</option></select></div>
-                                <div class="col-12"><label class="form-label">Biography</label><textarea name="biography" id="editBiography" class="form-control" rows="4"></textarea></div>
+                                <div class="col-md-6"><label class="form-label">Full Name <span
+                                            class="text-danger">*</span></label><input type="text" name="full_name"
+                                        id="editFullName" class="form-control" required></div>
+                                <div class="col-md-6"><label class="form-label">4-Digit Voting Code <span
+                                            class="text-danger">*</span></label><input type="text"
+                                        name="contestant_code" id="editContestantCode" class="form-control"
+                                        inputmode="numeric" maxlength="4" pattern="[0-9]{4}" required>
+                                    <div class="form-help">Exactly four digits and unique within this event.</div>
+                                </div>
+                                <div class="col-md-6"><label class="form-label">Category <span
+                                            class="text-danger">*</span></label><select name="category_id"
+                                        id="editCategorySelect" class="form-select" required></select></div>
+                                <div class="col-md-3"><label class="form-label">Gender</label><select name="gender"
+                                        id="editGender" class="form-select">
+                                        <option value="Female">Female</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Other">Other</option>
+                                    </select></div>
+                                <div class="col-md-3"><label class="form-label">Status</label><select name="status"
+                                        id="editStatus" class="form-select">
+                                        <option value="Active">Active</option>
+                                        <option value="Inactive">Inactive</option>
+                                        <option value="Disqualified">Disqualified</option>
+                                    </select></div>
+                                <div class="col-12"><label class="form-label">Biography</label><textarea
+                                        name="biography" id="editBiography" class="form-control" rows="4"></textarea>
+                                </div>
                             </div>
                         </div>
-                        <div class="modal-footer bg-light"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary"><i class="bi bi-check2-circle me-1"></i>Save Changes</button></div>
+                        <div class="modal-footer bg-light"><button type="button" class="btn btn-light"
+                                data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary"><i
+                                    class="bi bi-check2-circle me-1"></i>Save Changes</button></div>
                     </form>
                 </div>
             </div>
@@ -454,7 +498,6 @@ $pageTitle='Contestants';require_once __DIR__.'/../../includes/header.php';requi
 
 
 <script>
-
 const allCategories = <?=json_encode($allCategories,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;
 
 
@@ -488,19 +531,21 @@ function populateCategories(eventId, selectedId = '') {
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.edit-contestant').forEach(btn => {
         btn.addEventListener('click', () => {
-            const d=btn.dataset;
-            document.getElementById('editContestantId').value=d.id||'';
-            document.getElementById('editEventId').value=d.eventId||'';
-            document.getElementById('editFullName').value=d.name||'';
-            document.getElementById('editContestantCode').value=d.code||'';
-            document.getElementById('editGender').value=d.gender||'Female';
-            document.getElementById('editStatus').value=d.status||'Active';
-            document.getElementById('editBiography').value=d.biography||'';
-            const category=document.getElementById('editCategorySelect');
-            category.innerHTML='<option value="">Select category</option>';
-            allCategories.filter(c=>String(c.event_id)===String(d.eventId)).forEach(c=>{
-                const option=document.createElement('option'); option.value=c.id; option.textContent=c.name+' — '+c.category_code;
-                if(String(c.id)===String(d.categoryId)) option.selected=true;
+            const d = btn.dataset;
+            document.getElementById('editContestantId').value = d.id || '';
+            document.getElementById('editEventId').value = d.eventId || '';
+            document.getElementById('editFullName').value = d.name || '';
+            document.getElementById('editContestantCode').value = d.code || '';
+            document.getElementById('editGender').value = d.gender || 'Female';
+            document.getElementById('editStatus').value = d.status || 'Active';
+            document.getElementById('editBiography').value = d.biography || '';
+            const category = document.getElementById('editCategorySelect');
+            category.innerHTML = '<option value="">Select category</option>';
+            allCategories.filter(c => String(c.event_id) === String(d.eventId)).forEach(c => {
+                const option = document.createElement('option');
+                option.value = c.id;
+                option.textContent = c.name + ' — ' + c.category_code;
+                if (String(c.id) === String(d.categoryId)) option.selected = true;
                 category.appendChild(option);
             });
         });
@@ -539,7 +584,6 @@ document.addEventListener('DOMContentLoaded', () => {
         'AUTO' : '----');
 
 });
-
 </script>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>
