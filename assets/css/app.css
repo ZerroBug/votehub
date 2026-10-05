@@ -1,6 +1,11 @@
+:root{--font-family:'Poppins',sans-serif}
 :root{--primary:#5b4ce1;--primary2:#7b6ff0;--dark:#172033;--muted:#748094;--bg:#f5f7fb;--border:#e7ebf2;--sidebar:#111827}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);font-family:Inter,sans-serif;color:var(--dark);font-size:14px}
+/* VOTEHUB GLOBAL TYPOGRAPHY — POPPINS */
+html,body,button,input,select,textarea,.form-control,.form-select,.btn,.table,.modal,.dropdown-menu,.alert,.card,.nav-link,.navbar,.pagination{font-family:'Poppins',sans-serif;}
+code,pre,kbd,.ussd-output{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+
+body{margin:0;background:var(--bg);font-family:'Poppins',sans-serif;color:var(--dark);font-size:14px}
 a{text-decoration:none}
 .app{min-height:100vh}
 .sidebar{position:fixed;left:0;top:0;bottom:0;width:255px;background:var(--sidebar);color:#fff;padding-bottom:20px;z-index:1100;overflow:auto}

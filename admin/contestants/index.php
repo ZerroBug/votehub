@@ -470,30 +470,13 @@ $pageTitle='Contestants';require_once __DIR__.'/../../includes/header.php';requi
 
 
 <style>
-#editContestantModal {
-    z-index: 5000 !important;
-}
-
-#editContestantModal .modal-dialog {
-    position: relative;
-    z-index: 5001;
-}
-
-#editContestantModal .modal-content {
-    position: relative;
-    z-index: 5002;
-}
-
-.modal-backdrop {
-    z-index: 4990 !important;
-}
-
-#editContestantCode {
-    min-height: 38px;
-    display: flex;
-    align-items: center;
-    background: #f3f4f6 !important;
-}
+/* Contestant edit modal: always above the fixed sidebar and other stacking contexts. */
+#editContestantModal { z-index: 5000 !important; }
+#editContestantModal .modal-dialog { position: relative; z-index: 5001; }
+#editContestantModal .modal-content { position: relative; z-index: 5002; }
+body > .modal-backdrop { z-index: 4990 !important; }
+#editContestantModal .modal-backdrop { z-index: 4990 !important; }
+#editContestantCode { min-height: 38px; display:flex; align-items:center; background:#f3f4f6 !important; }
 </style>
 
 <script>
@@ -531,6 +514,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Move the Bootstrap modal to <body> so sidebar/main stacking contexts can never cover it.
     const editModal = document.getElementById('editContestantModal');
     if (editModal && editModal.parentElement !== document.body) document.body.appendChild(editModal);
+    // Keep the modal outside .main/.content so the fixed sidebar cannot overlap it.
+    if (editModal) editModal.classList.add('vh-edit-modal');
     if (editModal) {
         editModal.style.zIndex = '5000';
         editModal.addEventListener('shown.bs.modal', () => {
