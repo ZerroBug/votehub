@@ -2,11 +2,9 @@
 declare(strict_types=1);
 
 $lock = __DIR__ . '/storage/install.lock';
-$installed = is_file($lock);
-
-if ($installed && $_SERVER['REQUEST_METHOD'] !== 'POST') {
-    // Show the installer so an authorized operator can explicitly choose a destructive reset.
-    // The reset option below requires an additional confirmation phrase.
+if (is_file($lock)) {
+    http_response_code(403);
+    exit('VoteHub has already been installed. Remove storage/install.lock only if you intentionally need to reinstall.');
 }
 
 session_start();
@@ -15,7 +13,7 @@ $success = '';
 
 $voteHubTables = [
     'votes', 'transactions', 'ussd_sessions', 'audit_logs',
-    'contestants', 'categories', 'events', 'users', 'webhook_events', 'client_cashouts'
+    'contestants', 'categories', 'events', 'users'
 ];
 
 function h($v): string { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
@@ -68,8 +66,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $paystackMode = ($_POST['paystack_mode'] ?? 'test') === 'live' ? 'live' : 'test';
     $seedDemo = !empty($_POST['seed_demo']);
     $freshInstall = !empty($_POST['fresh_install']);
-    $resetExisting = !empty($_POST['reset_existing']);
-    $resetConfirm = trim((string)($_POST['reset_confirmation'] ?? ''));
 
     try {
         if (!filter_var($appUrl, FILTER_VALIDATE_URL) || !str_starts_with(strtolower($appUrl), 'https://')) throw new RuntimeException('APP URL must be a valid HTTPS URL.');
@@ -98,19 +94,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
 
         $existing = existingVoteHubTables($pdo, $voteHubTables);
-
-        if (($freshInstall || $resetExisting) && $existing) {
-            if ($resetExisting && $resetConfirm !== 'RESET VOTEHUB') {
-                throw new RuntimeException('Destructive reset requires the exact confirmation phrase: RESET VOTEHUB');
-            }
-            dropVoteHubTables($pdo, $voteHubTables);
-            // A reset is a complete reinstall, so remove the previous installation lock.
-            if (is_file($lock)) @unlink($lock);
-        } elseif ($existing) {
-            throw new RuntimeException('An existing or partial VoteHub database was detected: ' . implode(', ', $existing) . '. Select Fresh installation for a new/partial deployment, or use Reset existing VoteHub installation to delete and recreate all VoteHub tables.');
-        } elseif ($resetExisting && $resetConfirm !== 'RESET VOTEHUB') {
-            throw new RuntimeException('Destructive reset requires the exact confirmation phrase: RESET VOTEHUB');
+        if ($existing && !$freshInstall) {
+            throw new RuntimeException('An existing or partial VoteHub database was detected: ' . implode(', ', $existing) . '. If this is a new deployment with no real VoteHub data, tick “Fresh installation” and run again.');
         }
+        if ($freshInstall && $existing) dropVoteHubTables($pdo, $voteHubTables);
 
         importSchema($pdo);
 
@@ -188,14 +175,7 @@ body{background:#f5f7fb}.setup-card{border:0;border-radius:18px;box-shadow:0 16p
 <div class="col-md-4"><label class="form-label">Environment</label><select name="paystack_mode" class="form-select"><option value="test" <?=($_POST['paystack_mode']??'test')==='test'?'selected':''?>>Test</option><option value="live" <?=($_POST['paystack_mode']??'')==='live'?'selected':''?>>Live</option></select></div>
 <div class="col-md-8"><label class="form-label">Secret key</label><input name="paystack_key" type="password" class="form-control" placeholder="sk_test_..." required></div>
 </div><div class="form-text">The environment and key prefix must match.</div></div>
-<div class="section"><div class="danger-box">
-<div class="form-check"><input class="form-check-input" type="checkbox" name="fresh_install" value="1" id="fresh_install"><label class="form-check-label fw-semibold" for="fresh_install">Fresh installation</label></div>
-<div class="small text-danger mt-2">For a new/partial deployment. Existing VoteHub tables will be dropped and recreated.</div>
-<hr>
-<div class="form-check"><input class="form-check-input" type="checkbox" name="reset_existing" value="1" id="reset_existing"><label class="form-check-label fw-bold text-danger" for="reset_existing">Reset existing VoteHub installation</label></div>
-<div class="small text-danger mt-2">This permanently deletes all existing VoteHub data in the selected database, including users, events, categories, contestants, transactions, votes, USSD sessions, audit logs, webhook records and client cash-outs. Unrelated database tables are not touched.</div>
-<div class="mt-3"><label class="form-label">Reset confirmation</label><input name="reset_confirmation" class="form-control" placeholder="Type RESET VOTEHUB" autocomplete="off"><div class="form-text text-danger">Required only when resetting an existing installation.</div></div>
-</div></div>
+<div class="section"><div class="danger-box"><div class="form-check"><input class="form-check-input" type="checkbox" name="fresh_install" value="1" id="fresh_install"><label class="form-check-label fw-semibold" for="fresh_install">Fresh installation</label></div><div class="small text-danger mt-2">Use this only for a new/partial deployment with no real VoteHub data. It drops only the VoteHub tables listed by the installer, not unrelated tables in the database.</div></div></div>
 <div class="section"><div class="form-check"><input class="form-check-input" type="checkbox" name="seed_demo" value="1" id="seed_demo"><label class="form-check-label" for="seed_demo">Create optional demo event, category and contestant</label></div></div>
 <div class="section"><button class="btn btn-primary btn-lg" type="submit">Install VoteHub</button></div>
 </form>
